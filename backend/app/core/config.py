@@ -20,6 +20,10 @@ class Settings(BaseSettings):
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 60
 
+    # LLM
+    groq_api_key: str = "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"
+    groq_model: str = "llama-3.1-8b-instant"
+
     @property
     def is_development(self) -> bool:
         return self.environment == "development"
