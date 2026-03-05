@@ -21,7 +21,7 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 60
 
     # LLM
-    groq_api_key: str = "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"
+    groq_api_key: str = ""
     groq_model: str = "llama-3.1-8b-instant"
 
     @property
