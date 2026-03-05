@@ -1,5 +1,5 @@
 import client from './client'
-import { Task, TaskAssignment, TaskListOut } from '../types'
+import { AgentOutput, Task, TaskAssignment, TaskListOut } from '../types'
 
 export const getTasks = async (page = 1, status?: string): Promise<TaskListOut> => {
   const params: Record<string, unknown> = { page, page_size: 20 }
@@ -40,5 +40,10 @@ export const getTaskAssignments = async (taskId: string): Promise<TaskAssignment
 
 export const getTaskFeedback = async (taskId: string) => {
   const res = await client.get(`/feedback/${taskId}`)
+  return res.data
+}
+
+export const generateResponse = async (taskId: string): Promise<AgentOutput> => {
+  const res = await client.post(`/tasks/${taskId}/generate`)
   return res.data
 }

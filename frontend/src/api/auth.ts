@@ -20,3 +20,8 @@ export const getMe = async (): Promise<User> => {
   const res = await client.get('/auth/me')
   return res.data
 }
+
+export const getAnnotators = async (): Promise<User[]> => {
+  const res = await client.get('/auth/users/annotators')
+  return res.data
+}

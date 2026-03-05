@@ -2,6 +2,7 @@ import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
+from app.models.models import Task, TaskStatus
 from sqlalchemy.ext.asyncio import AsyncSession
 from datetime import datetime, timezone
 
@@ -102,14 +103,34 @@ async def submit_feedback(
     assignment.status = AssignmentStatus.completed
     assignment.completed_at = datetime.now(timezone.utc)
 
+    # Flush first so the completed status is visible to the check below
     await db.flush()
     await db.refresh(feedback)
+
+    # Now check if ALL assignments for this task are done
+    all_assignments_result = await db.execute(
+        select(TaskAssignment).where(TaskAssignment.task_id == assignment.task_id)
+    )
+    all_assignments = all_assignments_result.scalars().all()
+
+    all_done = all(
+        a.status in [AssignmentStatus.completed, AssignmentStatus.skipped]
+        for a in all_assignments
+    )
+
+    if all_done:
+        task_result = await db.execute(
+            select(Task).where(Task.id == assignment.task_id)
+        )
+        task = task_result.scalar_one_or_none()
+        if task:
+            task.status = TaskStatus.completed
+            await db.flush()
 
     # Trigger async quality scoring
     compute_quality_score.delay(str(feedback.id))
 
     return feedback
-
 
 @router.get("/feedback/{task_id}", response_model=list[FeedbackOut])
 async def get_task_feedback(
