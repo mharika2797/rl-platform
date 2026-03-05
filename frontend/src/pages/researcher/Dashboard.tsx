@@ -9,6 +9,7 @@ export default function Dashboard() {
   const { data, isLoading } = useQuery({
     queryKey: ['tasks'],
     queryFn: () => getTasks(),
+    refetchInterval: 10000,
   })
 
   const tasks = data?.items ?? []

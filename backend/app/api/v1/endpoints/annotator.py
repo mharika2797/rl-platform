@@ -1,12 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
+from app.models.models import AgentOutput, AssignmentStatus, Task, TaskAssignment, User
+from app.schemas.feedback import AgentOutputOut
 import uuid
 from datetime import datetime, timezone
-
 from app.api.deps import get_current_user
 from app.db.session import get_db
-from app.models.models import AssignmentStatus, Task, TaskAssignment, User
+from app.models.models import AgentOutput, AssignmentStatus, Task, TaskAssignment, User
 from app.schemas.queue import QueueItemOut
 
 router = APIRouter(prefix="/annotator", tags=["annotator"])
@@ -105,3 +106,26 @@ async def skip_assignment(
     assignment.status = AssignmentStatus.skipped
     await db.flush()
     return {"message": "Assignment skipped"}
+
+
+@router.get("/queue/{assignment_id}/outputs", response_model=list[AgentOutputOut])
+async def get_assignment_outputs(
+    assignment_id: uuid.UUID,
+    db: AsyncSession = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Get agent outputs for the task in this assignment."""
+    result = await db.execute(
+        select(TaskAssignment).where(
+            TaskAssignment.id == assignment_id,
+            TaskAssignment.annotator_id == current_user.id,
+        )
+    )
+    assignment = result.scalar_one_or_none()
+    if not assignment:
+        raise HTTPException(status_code=404, detail="Assignment not found")
+
+    outputs = await db.execute(
+        select(AgentOutput).where(AgentOutput.task_id == assignment.task_id)
+    )
+    return outputs.scalars().all()

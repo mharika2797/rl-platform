@@ -24,17 +24,19 @@ export default function Tasks() {
   const { data, isLoading } = useQuery({
     queryKey: ['tasks'],
     queryFn: () => getTasks(),
+    refetchInterval: 10000,
   })
 
   const { register, handleSubmit, reset, formState: { errors } } = useForm<TaskForm>()
 
   const mutation = useMutation({
     mutationFn: createTask,
-    onSuccess: () => {
+    onSuccess: (newTask) => {
       queryClient.invalidateQueries({ queryKey: ['tasks'] })
       toast.success('Task created')
       reset()
       setShowForm(false)
+      navigate(`/tasks/${newTask.id}`) 
     },
     onError: (err: any) => toast.error(err?.response?.data?.detail || 'Failed to create task'),
   })

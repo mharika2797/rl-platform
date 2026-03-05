@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import select, func
 from sqlalchemy.ext.asyncio import AsyncSession
+from app.api.deps import get_current_user, require_researcher
+from app.models.models import TaskAssignment, AssignmentStatus, UserRole
 
 from app.api.deps import get_current_user
 from app.core.security import create_access_token, hash_password, verify_password
@@ -47,3 +49,32 @@ async def login(payload: LoginRequest, db: AsyncSession = Depends(get_db)):
 @router.get("/me", response_model=UserOut)
 async def me(current_user: User = Depends(get_current_user)):
     return current_user
+
+@router.get("/users/annotators", response_model=list[UserOut])
+async def list_annotators(
+    db: AsyncSession = Depends(get_db),
+    _: User = Depends(require_researcher),
+):
+    """Return all annotators sorted by active assignment count (least busy first)."""
+    subquery = (
+        select(
+            TaskAssignment.annotator_id,
+            func.count(TaskAssignment.id).label("task_count")
+        )
+        .where(TaskAssignment.status.in_([
+            AssignmentStatus.pending,
+            AssignmentStatus.in_progress
+        ]))
+        .group_by(TaskAssignment.annotator_id)
+        .subquery()
+    )
+
+    result = await db.execute(
+        select(User, func.coalesce(subquery.c.task_count, 0).label("task_count"))
+        .outerjoin(subquery, User.id == subquery.c.annotator_id)
+        .where(User.role == UserRole.annotator)
+        .where(User.is_active == True)
+        .order_by(func.coalesce(subquery.c.task_count, 0).asc())
+    )
+    rows = result.all()
+    return [row[0] for row in rows]

@@ -2,7 +2,7 @@ import { useParams, useNavigate } from 'react-router-dom'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { useForm } from 'react-hook-form'
 import toast from 'react-hot-toast'
-import { getQueue, startAssignment, skipAssignment, submitFeedback } from '../../api/annotator'
+import { getQueue, getAssignmentOutputs, startAssignment, skipAssignment, submitFeedback } from '../../api/annotator'
 import Card from '../../components/ui/Card'
 import Button from '../../components/ui/Button'
 import Badge from '../../components/ui/Badge'
@@ -20,6 +20,12 @@ export default function Annotate() {
   const { data: queue = [] } = useQuery({
     queryKey: ['queue'],
     queryFn: getQueue,
+  })
+
+  const { data: agentOutputs = [] } = useQuery({
+    queryKey: ['assignment-outputs', assignmentId],
+    queryFn: () => getAssignmentOutputs(assignmentId!),
+    enabled: !!assignmentId,
   })
 
   const item = queue.find(q => q.assignment_id === assignmentId)
@@ -47,6 +53,7 @@ export default function Annotate() {
   const submitMutation = useMutation({
     mutationFn: (data: FeedbackForm) => submitFeedback({
       assignment_id: assignmentId!,
+      agent_output_id: agentOutputs[0]?.id,
       reward_scalar: Number(data.reward_scalar),
       rationale: data.rationale,
     }),
@@ -75,7 +82,7 @@ export default function Annotate() {
         </button>
       </div>
 
-      {/* Task */}
+      {/* Task prompt */}
       <Card>
         <div className="flex items-start justify-between gap-4 mb-3">
           <h1 className="text-lg font-bold text-slate-200">{item.task_title}</h1>
@@ -85,7 +92,6 @@ export default function Annotate() {
         <p className="text-sm text-slate-300 font-mono bg-white/3 border border-white/5 rounded p-3 whitespace-pre-wrap">
           {item.task_prompt}
         </p>
-
         {item.status === 'pending' && (
           <Button
             onClick={() => startMutation.mutate()}
@@ -96,6 +102,26 @@ export default function Annotate() {
           </Button>
         )}
       </Card>
+
+      {/* LLM Response */}
+      {agentOutputs.length > 0 ? (
+        <Card>
+          <div className="flex items-center justify-between mb-3">
+            <p className="text-xs font-mono text-slate-400 uppercase tracking-widest">AI Response to Rate</p>
+            <Badge label={agentOutputs[0].model_id} variant="green" />
+          </div>
+          <p className="text-sm text-slate-300 font-mono bg-emerald-500/5 border border-emerald-500/10 rounded p-3 whitespace-pre-wrap">
+            {agentOutputs[0].output}
+          </p>
+        </Card>
+      ) : (
+        <Card>
+          <p className="text-xs font-mono text-slate-500 uppercase tracking-widest mb-1">AI Response</p>
+          <p className="text-sm text-slate-600 font-mono">
+            No AI response generated yet. Ask the researcher to generate one.
+          </p>
+        </Card>
+      )}
 
       {/* Feedback form */}
       {(item.status === 'in_progress' || item.status === 'pending') && (
@@ -135,7 +161,7 @@ export default function Annotate() {
               </label>
               <textarea
                 rows={4}
-                placeholder="Explain your rating..."
+                placeholder="Explain your rating of the AI response..."
                 className="w-full px-3 py-2.5 rounded bg-white/5 border border-white/10 text-slate-200 text-sm font-mono focus:outline-none focus:ring-1 focus:ring-cyan-500/50 resize-none placeholder:text-slate-600"
                 {...register('rationale', { required: 'Rationale is required', minLength: { value: 5, message: 'Too short' } })}
               />
@@ -150,7 +176,11 @@ export default function Annotate() {
               >
                 Skip
               </Button>
-              <Button type="submit" loading={submitMutation.isPending}>
+              <Button
+                type="submit"
+                loading={submitMutation.isPending}
+                disabled={agentOutputs.length === 0}
+              >
                 Submit Feedback
               </Button>
             </div>
