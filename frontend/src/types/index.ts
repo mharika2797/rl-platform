@@ -65,3 +65,11 @@ export interface TokenResponse {
   token_type: string
   user: User
 }
+
+export interface AgentOutput {
+  id: string
+  task_id: string
+  model_id: string
+  output: string
+  generated_at: string
+}
