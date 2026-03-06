@@ -1,12 +1,16 @@
 from celery import Celery
-
 from app.core.config import settings
+
+is_rediss = settings.redis_url.startswith("rediss://")
+
+ssl_config = {
+    "ssl_cert_reqs": "CERT_NONE"
+} if is_rediss else None
 
 celery_app = Celery(
     "rl_platform",
     broker=settings.redis_url,
     backend=settings.redis_url,
-    include=["app.workers.tasks"],
 )
 
 celery_app.conf.update(
@@ -15,6 +19,7 @@ celery_app.conf.update(
     result_serializer="json",
     timezone="UTC",
     enable_utc=True,
-    task_track_started=True,
-    worker_prefetch_multiplier=1,
+    broker_connection_retry_on_startup=True,
+    broker_use_ssl=ssl_config,
+    redis_backend_use_ssl=ssl_config,
 )
