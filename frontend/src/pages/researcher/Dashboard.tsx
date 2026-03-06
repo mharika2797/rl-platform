@@ -23,29 +23,21 @@ export default function Dashboard() {
 
   const handleExport = async () => {
     try {
-      const res = await client.post('/exports', { min_quality_score: 0.0 })
-      const jobId = res.data.export_job_id
-      toast.success('Export started — preparing dataset...')
-
-      const interval = setInterval(async () => {
-        const status = await client.get(`/exports/${jobId}/status`)
-        if (status.data.status === 'completed') {
-          clearInterval(interval)
-          toast.success('Dataset ready — downloading!')
-          const downloadRes = await client.get(`/exports/${jobId}/download`, { responseType: 'blob' })
-          const url = window.URL.createObjectURL(new Blob([downloadRes.data]))
-          const link = document.createElement('a')
-          link.href = url
-          link.setAttribute('download', `rl_dataset_${jobId.slice(0, 8)}.jsonl`)
-          document.body.appendChild(link)
-          link.click()
-          link.remove()
-          window.URL.revokeObjectURL(url)
-        } else if (status.data.status === 'failed') {
-          clearInterval(interval)
-          toast.error('Export failed')
-        }
-      }, 2000)
+      toast.success('Preparing export...')
+    const res = await client.post(
+      '/exports',
+      { min_quality_score: 0.0 },
+      { responseType: 'blob' }
+    )
+    const url = window.URL.createObjectURL(new Blob([res.data]))
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute('download', 'rl_dataset.jsonl')
+    document.body.appendChild(link)
+    link.click()
+    link.remove()
+    window.URL.revokeObjectURL(url)
+    toast.success('Dataset downloaded!')
     } catch (err: any) {
       toast.error(err?.response?.data?.detail || 'Export failed')
     }
