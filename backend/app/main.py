@@ -11,8 +11,9 @@ from app.db.session import Base, engine
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
+    if settings.is_development:
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
     yield
     await engine.dispose()
 
@@ -59,12 +60,3 @@ async def health():
     return {"status": "ok", "environment": settings.environment}
 
 
-@app.get("/debug-origins")
-async def debug_origins():
-    return {"allowed_origins": allowed_origins}
-
-@app.post("/admin/init-db")
-async def init_db():
-    async with engine.begin() as conn:
-        await conn.run_sync(Base.metadata.create_all)
-    return {"status": "tables created"}
