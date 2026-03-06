@@ -1,10 +1,11 @@
+import ssl
 from celery import Celery
 from app.core.config import settings
 
 is_rediss = settings.redis_url.startswith("rediss://")
 
 ssl_config = {
-    "ssl_cert_reqs": "CERT_NONE"
+    "ssl_cert_reqs": ssl.CERT_NONE
 } if is_rediss else None
 
 celery_app = Celery(
