@@ -11,9 +11,8 @@ from app.db.session import Base, engine
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    if settings.is_development:
-        async with engine.begin() as conn:
-            await conn.run_sync(Base.metadata.create_all)
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
     yield
     await engine.dispose()
 
