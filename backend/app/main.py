@@ -62,3 +62,9 @@ async def health():
 @app.get("/debug-origins")
 async def debug_origins():
     return {"allowed_origins": allowed_origins}
+
+@app.post("/admin/init-db")
+async def init_db():
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
+    return {"status": "tables created"}
