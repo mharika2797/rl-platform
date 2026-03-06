@@ -1,5 +1,6 @@
-from contextlib import asynccontextmanager
+import os
 
+from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
@@ -27,10 +28,14 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+allowed_origins = (
+    os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
+)
+
 # CORS — tighten origins in production
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:5173"],
+    allow_origins=allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -46,3 +51,8 @@ app.include_router(api_router)
 @app.get("/health")
 async def health():
     return {"status": "ok", "environment": settings.environment}
+
+@app.get("/debug-origins")
+async def debug_origins():
+    import os
+    return {"allowed_origins": os.getenv("ALLOWED_ORIGINS", "NOT SET")}
