@@ -34,9 +34,15 @@ def build_export(export_job_id: str) -> dict:
     )
 
     # Use sync engine
-    sync_url = settings.database_url.replace("+asyncpg", "+psycopg2")
-    engine = create_engine(sync_url)
+    sync_url = settings.database_url
+    if sync_url.startswith("postgresql+asyncpg://"):
+        sync_url = sync_url.replace("postgresql+asyncpg://", "postgresql+psycopg2://", 1)
+    if sync_url.startswith("postgres://"):
+        sync_url = sync_url.replace("postgres://", "postgresql+psycopg2://", 1)
+    if sync_url.startswith("postgresql://"):
+        sync_url = sync_url.replace("postgresql://", "postgresql+psycopg2://", 1)
 
+    engine = create_engine(sync_url)
     with Session(engine) as db:
         job = db.execute(
             select(ExportJob).where(ExportJob.id == export_job_id)
