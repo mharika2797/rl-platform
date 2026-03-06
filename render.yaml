@@ -12,13 +12,14 @@ services:
     dockerContext: ./backend
     plan: free
     healthCheckPath: /health
+    startCommand: sh -c "pip install -q groq==0.13.0 && uvicorn app.main:app --host 0.0.0.0 --port $PORT"
     envVars:
       - key: DATABASE_URL
         fromDatabase:
           name: rl-platform-db
           property: connectionString
       - key: REDIS_URL
-        value: redis://default:@rl-platform-redis:6379/0
+        value: rediss://default:YOUR_UPSTASH_PASSWORD@YOUR_UPSTASH_HOST:6379
       - key: SECRET_KEY
         generateValue: true
       - key: ENVIRONMENT
@@ -27,20 +28,23 @@ services:
         sync: false
       - key: GROQ_MODEL
         value: llama-3.1-8b-instant
+      - key: ALLOWED_ORIGINS
+        sync: false
 
-  - type: worker
+  - type: web
     name: rl-platform-worker
     runtime: docker
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
     plan: free
+    startCommand: sh -c "pip install -q groq==0.13.0 && celery -A app.workers.celery_app worker --loglevel=info"
     envVars:
       - key: DATABASE_URL
         fromDatabase:
           name: rl-platform-db
           property: connectionString
       - key: REDIS_URL
-        value: redis://default:@rl-platform-redis:6379/0
+        value: rediss://default:YOUR_UPSTASH_PASSWORD@YOUR_UPSTASH_HOST:6379
       - key: SECRET_KEY
         sync: false
       - key: GROQ_API_KEY
@@ -53,7 +57,7 @@ services:
     runtime: node
     rootDir: frontend
     buildCommand: npm install && npm run build
-    startCommand: npx vite preview --host 0.0.0.0 --port 3000
+    startCommand: npx vite preview --host 0.0.0.0 --port $PORT
     plan: free
     envVars:
       - key: VITE_API_URL
