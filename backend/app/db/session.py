@@ -13,7 +13,7 @@ if database_url.startswith("postgres://"):
 
 
 engine = create_async_engine(
-    settings.database_url,
+    database_url,
     echo=settings.is_development,
     pool_pre_ping=True,
 )
