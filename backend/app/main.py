@@ -1,5 +1,4 @@
 import os
-
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -12,7 +11,6 @@ from app.db.session import Base, engine
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    # Create all tables on startup (dev only — use Alembic in production)
     if settings.is_development:
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
@@ -28,11 +26,20 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-allowed_origins = (
-    os.getenv("ALLOWED_ORIGINS", "http://localhost:3000").split(",")
-)
+# Build allowed origins
+allowed_origins = os.getenv(
+    "ALLOWED_ORIGINS",
+    "http://localhost:3000"
+).split(",")
 
-# CORS — tighten origins in production
+# Always allow the Render frontend in production
+if settings.environment == "production":
+    allowed_origins.append("https://rl-platform-frontend.onrender.com")
+
+# Strip whitespace from each origin
+allowed_origins = [o.strip() for o in allowed_origins]
+
+# CORS must be first middleware
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
@@ -41,7 +48,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Prometheus metrics at /metrics
+# Prometheus metrics
 Instrumentator().instrument(app).expose(app)
 
 # Routers
@@ -52,7 +59,7 @@ app.include_router(api_router)
 async def health():
     return {"status": "ok", "environment": settings.environment}
 
+
 @app.get("/debug-origins")
 async def debug_origins():
-    import os
-    return {"allowed_origins": os.getenv("ALLOWED_ORIGINS", "NOT SET")}
+    return {"allowed_origins": allowed_origins}
