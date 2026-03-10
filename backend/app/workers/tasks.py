@@ -19,7 +19,7 @@ def compute_quality_score(feedback_id: str) -> dict:
     return {"feedback_id": feedback_id, "quality_score": None}
 
 
-@celery_app.task(name="app.workerstasks.build_export")
+@celery_app.task(name="app.workers.tasks.build_export")
 def build_export(export_job_id: str) -> dict:
     """Generate JSONL export file from filtered feedback."""
     import json
