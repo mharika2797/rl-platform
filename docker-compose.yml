@@ -79,6 +79,8 @@ services:
     volumes:
       - ./infra/prometheus.yml:/etc/prometheus/prometheus.yml
       - prometheus_data:/prometheus
+    environment:
+      - GRAFANA_CLOUD_TOKEN=${GRAFANA_CLOUD_TOKEN}
 
   grafana:
     image: grafana/grafana:latest
@@ -113,4 +115,4 @@ volumes:
   grafana_data:
   exports_data:
 
-ALLOWED_ORIGINS: http://localhost:3000
+
