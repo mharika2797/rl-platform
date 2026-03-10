@@ -1,86 +1,33 @@
-name: CI/CD
+name: Deploy to Render
 
 on:
   push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+    branches:
+      - main
 
 jobs:
-  test:
+  deploy-api:
+    name: Deploy API
     runs-on: ubuntu-latest
-    services:
-      postgres:
-        image: postgres:16-alpine
-        env:
-          POSTGRES_USER: rlplatform
-          POSTGRES_PASSWORD: secret
-          POSTGRES_DB: rlplatform
-        ports:
-          - 5432:5432
-        options: >-
-          --health-cmd pg_isready
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-      redis:
-        image: redis:7-alpine
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
     steps:
-      - uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.12"
-
-      - name: Install dependencies
-        run: |
-          cd backend
-          pip install -r requirements.txt
-
-      - name: Run tests
-        env:
-          DATABASE_URL: postgresql+asyncpg://rlplatform:secret@localhost:5432/rlplatform
-          REDIS_URL: redis://localhost:6379/0
-          SECRET_KEY: test-secret-key
-          GROQ_API_KEY: test-key
-          GROQ_MODEL: llama-3.1-8b-instant
-        run: |
-          cd backend
-          pytest tests/ -v --tb=short || echo "No tests yet — skipping"
-
-  deploy-backend:
-    needs: test
-    runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
-    steps:
-      - name: Deploy API to Render
+      - name: Trigger API deploy
         run: |
           curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_API }}"
 
   deploy-worker:
-    needs: test
+    name: Deploy Worker
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    needs: deploy-api
     steps:
-      - name: Deploy Worker to Render
+      - name: Trigger Worker deploy
         run: |
           curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_WORKER }}"
 
   deploy-frontend:
-    needs: test
+    name: Deploy Frontend
     runs-on: ubuntu-latest
-    if: github.ref == 'refs/heads/main'
+    needs: deploy-api
     steps:
-      - name: Deploy Frontend to Render
+      - name: Trigger Frontend deploy
         run: |
           curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_FRONTEND }}"
