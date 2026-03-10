@@ -8,7 +8,7 @@ from app.workers.celery_app import celery_app
 logger = logging.getLogger(__name__)
 
 
-@celery_app.task(name="tasks.compute_quality_score")
+@celery_app.task(name="app.workers.tasks.compute_quality_score")
 def compute_quality_score(feedback_id: str) -> dict:
     """
     Phase 4: Compute quality score for a feedback submission.
@@ -19,7 +19,7 @@ def compute_quality_score(feedback_id: str) -> dict:
     return {"feedback_id": feedback_id, "quality_score": None}
 
 
-@celery_app.task(name="tasks.build_export")
+@celery_app.task(name="app.workerstasks.build_export")
 def build_export(export_job_id: str) -> dict:
     """Generate JSONL export file from filtered feedback."""
     import json
@@ -108,7 +108,7 @@ def build_export(export_job_id: str) -> dict:
             raise
 
 
-@celery_app.task(name="tasks.assign_task")
+@celery_app.task(name="app.workers.tasks.assign_task")
 def assign_task_to_annotators(task_id: str) -> dict:
     """
     Phase 2: Distribute a task to available annotators based on workload.
@@ -118,7 +118,7 @@ def assign_task_to_annotators(task_id: str) -> dict:
     return {"task_id": task_id, "assigned": []}
 
 
-@celery_app.task(name="tasks.compute_quality_score")
+@celery_app.task(name="app.workers.tasks.compute_quality_score")
 def compute_quality_score(feedback_id: str) -> dict:
     from sqlalchemy import create_engine, select
     from sqlalchemy.orm import Session
@@ -194,13 +194,13 @@ def compute_quality_score(feedback_id: str) -> dict:
         return {"feedback_id": feedback_id, "quality_score": final_score}
 
 
-@celery_app.task(name="tasks.assign_task")
+@celery_app.task(name="app.workers.tasks.assign_task")
 def assign_task_to_annotators(task_id: str) -> dict:
     logger.info(f"Assigning task {task_id} to annotators")
     return {"task_id": task_id, "assigned": []}
 
 
-@celery_app.task(name="tasks.build_export")
+@celery_app.task(name="app.workers.tasks.build_export")
 def build_export(export_job_id: str) -> dict:
     """Generate JSONL export file from filtered feedback."""
     import asyncio
@@ -290,7 +290,7 @@ def build_export(export_job_id: str) -> dict:
     return asyncio.run(_export())
 
 
-@celery_app.task(name="tasks.assign_task")
+@celery_app.task(name="app.workers.tasks.assign_task")
 def assign_task_to_annotators(task_id: str) -> dict:
     logger.info(f"Assigning task {task_id} to annotators")
     return {"task_id": task_id, "assigned": []}
