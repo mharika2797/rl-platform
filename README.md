@@ -6,6 +6,7 @@ RLFlow is a full-stack platform for collecting human feedback on LLM outputs —
 
 🔗 **Live Demo:** https://rl-platform-frontend.onrender.com  
 📡 **API Docs:** https://rl-platform-api.onrender.com/docs
+📐 **Architecture:** https://mharika2797.github.io/rl-platform/
 
 ---
 
