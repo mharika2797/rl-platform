@@ -1,0 +1,787 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RLFlow — Architecture v2.0</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@300;400;600;700&family=Syne:wght@400;600;700;800&display=swap');
+
+  :root {
+    --bg: #080c14;
+    --surface: #0d1422;
+    --surface2: #111827;
+    --border: #1e2d45;
+    --accent: #00d4ff;
+    --accent2: #7c3aed;
+    --accent3: #10b981;
+    --accent4: #f59e0b;
+    --text: #e2e8f0;
+    --muted: #64748b;
+    --danger: #ef4444;
+  }
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Syne', sans-serif;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* Animated grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image: 
+      linear-gradient(rgba(0,212,255,0.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(0,212,255,0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .container {
+    max-width: 1100px;
+    margin: 0 auto;
+    padding: 60px 24px;
+    position: relative;
+    z-index: 1;
+  }
+
+  /* Header */
+  .header {
+    margin-bottom: 64px;
+    animation: fadeUp 0.6s ease both;
+  }
+
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(0,212,255,0.08);
+    border: 1px solid rgba(0,212,255,0.2);
+    color: var(--accent);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    padding: 6px 14px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+    letter-spacing: 0.1em;
+  }
+
+  .badge::before { content: '▶'; font-size: 8px; }
+
+  h1 {
+    font-size: clamp(32px, 5vw, 52px);
+    font-weight: 800;
+    line-height: 1.1;
+    letter-spacing: -0.02em;
+    margin-bottom: 16px;
+  }
+
+  h1 span { color: var(--accent); }
+
+  .subtitle {
+    color: var(--muted);
+    font-size: 15px;
+    font-family: 'JetBrains Mono', monospace;
+    line-height: 1.6;
+    max-width: 600px;
+  }
+
+  /* Section */
+  .section {
+    margin-bottom: 56px;
+    animation: fadeUp 0.6s ease both;
+  }
+
+  .section-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+  }
+
+  .section-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--accent);
+    background: rgba(0,212,255,0.08);
+    border: 1px solid rgba(0,212,255,0.15);
+    padding: 4px 10px;
+    border-radius: 3px;
+    letter-spacing: 0.05em;
+  }
+
+  h2 {
+    font-size: 20px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+  }
+
+  /* Architecture diagram */
+  .arch-diagram {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 32px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .arch-diagram::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 2px;
+    background: linear-gradient(90deg, var(--accent), var(--accent2), transparent);
+  }
+
+  .arch-layer {
+    margin-bottom: 20px;
+  }
+
+  .arch-layer:last-child { margin-bottom: 0; }
+
+  .layer-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--muted);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .layer-boxes {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+  }
+
+  .box {
+    padding: 10px 16px;
+    border-radius: 6px;
+    font-size: 13px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    border: 1px solid transparent;
+    cursor: default;
+    transition: transform 0.15s, box-shadow 0.15s;
+  }
+
+  .box:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+  }
+
+  .box.cyan { background: rgba(0,212,255,0.1); border-color: rgba(0,212,255,0.25); color: var(--accent); }
+  .box.purple { background: rgba(124,58,237,0.1); border-color: rgba(124,58,237,0.25); color: #a78bfa; }
+  .box.green { background: rgba(16,185,129,0.1); border-color: rgba(16,185,129,0.25); color: var(--accent3); }
+  .box.amber { background: rgba(245,158,11,0.1); border-color: rgba(245,158,11,0.25); color: var(--accent4); }
+  .box.red { background: rgba(239,68,68,0.1); border-color: rgba(239,68,68,0.25); color: #f87171; }
+  .box.slate { background: rgba(100,116,139,0.12); border-color: rgba(100,116,139,0.2); color: #94a3b8; }
+
+  .arch-arrow {
+    text-align: center;
+    color: var(--border);
+    font-size: 18px;
+    margin: 6px 0;
+    letter-spacing: 6px;
+  }
+
+  /* Cards grid */
+  .cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 16px;
+  }
+
+  .card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+    transition: border-color 0.2s, transform 0.2s;
+  }
+
+  .card:hover {
+    border-color: rgba(0,212,255,0.3);
+    transform: translateY(-2px);
+  }
+
+  .card-icon {
+    font-size: 20px;
+    margin-bottom: 12px;
+  }
+
+  .card h3 {
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 8px;
+    letter-spacing: -0.01em;
+  }
+
+  .card p {
+    font-size: 13px;
+    color: var(--muted);
+    line-height: 1.6;
+  }
+
+  .card .tag {
+    display: inline-block;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--accent);
+    background: rgba(0,212,255,0.08);
+    border: 1px solid rgba(0,212,255,0.15);
+    padding: 2px 8px;
+    border-radius: 3px;
+    margin-top: 10px;
+  }
+
+  /* DB Schema */
+  .schema-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 14px;
+  }
+
+  .schema-table {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    overflow: hidden;
+  }
+
+  .schema-table-header {
+    background: rgba(0,212,255,0.06);
+    border-bottom: 1px solid var(--border);
+    padding: 10px 14px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: var(--accent);
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+  }
+
+  .schema-table-header::before { content: '⬡'; font-size: 10px; }
+
+  .schema-field {
+    padding: 7px 14px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    border-bottom: 1px solid rgba(30,45,69,0.5);
+    font-size: 12px;
+  }
+
+  .schema-field:last-child { border-bottom: none; }
+
+  .field-name { font-family: 'JetBrains Mono', monospace; color: var(--text); }
+  .field-type { 
+    font-family: 'JetBrains Mono', monospace; 
+    font-size: 10px; 
+    color: var(--muted);
+    background: rgba(100,116,139,0.1);
+    padding: 2px 6px;
+    border-radius: 3px;
+  }
+  .field-pk { color: var(--accent4) !important; }
+  .field-fk { color: #a78bfa !important; }
+
+  /* Timeline / Phases */
+  .phases {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .phase {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    gap: 24px;
+    padding: 24px 0;
+    border-bottom: 1px solid var(--border);
+  }
+
+  .phase:last-child { border-bottom: none; }
+
+  .phase-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--muted);
+    padding-top: 2px;
+  }
+
+  .phase-label strong {
+    display: block;
+    font-size: 13px;
+    color: var(--text);
+    margin-bottom: 2px;
+  }
+
+  .phase-items {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .phase-item {
+    font-size: 12px;
+    padding: 6px 12px;
+    border-radius: 5px;
+    font-weight: 600;
+  }
+
+  /* API routes */
+  .routes {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .route {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 16px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+  }
+
+  .method {
+    font-size: 10px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 3px;
+    letter-spacing: 0.05em;
+    min-width: 52px;
+    text-align: center;
+  }
+
+  .method.get { background: rgba(16,185,129,0.15); color: var(--accent3); }
+  .method.post { background: rgba(0,212,255,0.12); color: var(--accent); }
+  .method.put { background: rgba(245,158,11,0.12); color: var(--accent4); }
+  .method.delete { background: rgba(239,68,68,0.12); color: #f87171; }
+
+  .route-path { color: var(--text); flex: 1; }
+  .route-desc { color: var(--muted); font-size: 11px; }
+
+  /* Animations */
+  @keyframes fadeUp {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .section:nth-child(1) { animation-delay: 0.1s; }
+  .section:nth-child(2) { animation-delay: 0.2s; }
+  .section:nth-child(3) { animation-delay: 0.3s; }
+  .section:nth-child(4) { animation-delay: 0.4s; }
+  .section:nth-child(5) { animation-delay: 0.5s; }
+  .section:nth-child(6) { animation-delay: 0.6s; }
+
+  /* Divider */
+  .divider {
+    height: 1px;
+    background: linear-gradient(90deg, var(--border), transparent);
+    margin: 48px 0;
+  }
+
+  /* Note */
+  .note {
+    background: rgba(245,158,11,0.06);
+    border: 1px solid rgba(245,158,11,0.2);
+    border-radius: 8px;
+    padding: 16px 20px;
+    font-size: 13px;
+    color: #fbbf24;
+    font-family: 'JetBrains Mono', monospace;
+    margin-top: 16px;
+  }
+
+  .note::before { content: '⚠ NOTE: '; font-weight: 700; }
+
+  @media (max-width: 640px) {
+    .phase { grid-template-columns: 1fr; gap: 8px; }
+    .route-desc { display: none; }
+  }
+</style>
+</head>
+<body>
+<div class="container">
+
+  <div class="header">
+    <div class="badge">RLFLOW — ARCHITECTURE v2.0</div>
+    <h1><span>RLFlow</span> — RLHF Platform</h1>
+    <p class="subtitle">Full-stack end-to-end RLHF data collection & annotation platform. Same pipeline used to train ChatGPT and Claude.</p>
+    <div style="display:flex;gap:12px;margin-top:20px;flex-wrap:wrap;">
+      <a href="https://rl-platform-frontend.onrender.com" target="_blank" style="display:inline-flex;align-items:center;gap:8px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);color:#10b981;font-family:'JetBrains Mono',monospace;font-size:11px;padding:6px 14px;border-radius:4px;text-decoration:none;letter-spacing:0.05em;">&#x1F7E2; Frontend (Live)</a>
+      <a href="https://rl-platform-api.onrender.com/docs" target="_blank" style="display:inline-flex;align-items:center;gap:8px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);color:#10b981;font-family:'JetBrains Mono',monospace;font-size:11px;padding:6px 14px;border-radius:4px;text-decoration:none;letter-spacing:0.05em;">&#x1F7E2; API Docs (Live)</a>
+      <a href="https://mharika2797.grafana.net" target="_blank" style="display:inline-flex;align-items:center;gap:8px;background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.25);color:#10b981;font-family:'JetBrains Mono',monospace;font-size:11px;padding:6px 14px;border-radius:4px;text-decoration:none;letter-spacing:0.05em;">&#x1F7E2; Grafana Cloud</a>
+    </div>
+  </div>
+
+  <!-- 1. System Overview -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-num">01</span>
+      <h2>System Architecture Overview</h2>
+    </div>
+    <div class="arch-diagram">
+      <div class="arch-layer">
+        <div class="layer-label">Frontend (React + TypeScript)</div>
+        <div class="layer-boxes">
+          <div class="box cyan">Task Creator UI</div>
+          <div class="box cyan">Annotator Workspace</div>
+          <div class="box cyan">Metrics Dashboard</div>
+          <div class="box cyan">Export Manager</div>
+        </div>
+      </div>
+      <div class="arch-arrow">↕ ↕ ↕ ↕</div>
+      <div class="arch-layer">
+        <div class="layer-label">API Layer (FastAPI + Python)</div>
+        <div class="layer-boxes">
+          <div class="box purple">Auth / JWT + RBAC</div>
+          <div class="box purple">Task API</div>
+          <div class="box purple">Feedback API</div>
+          <div class="box purple">Metrics API</div>
+          <div class="box purple">Export API</div>
+          <div class="box purple">Rate Limiting (slowapi)</div>
+          <div class="box purple">Groq LLM Integration</div>
+        </div>
+      </div>
+      <div class="arch-arrow">↕ ↕ ↕</div>
+      <div class="arch-layer">
+        <div class="layer-label">Worker Layer (Redis + Celery)</div>
+        <div class="layer-boxes">
+          <div class="box amber">Task Assignment Queue</div>
+          <div class="box amber">Quality Scoring Worker</div>
+          <div class="box amber">Export Builder Worker</div>
+        </div>
+      </div>
+      <div class="arch-arrow">↕ ↕</div>
+      <div class="arch-layer">
+        <div class="layer-label">Data Layer</div>
+        <div class="layer-boxes">
+          <div class="box green">PostgreSQL — Tasks, Feedback, Users</div>
+          <div class="box green">Redis — Queues + Cache</div>
+          <div class="box green">Upstash Redis (TLS) — Queues</div>
+          <div class="box green">JSONL Streaming Export</div>
+        </div>
+      </div>
+      <div class="arch-arrow">↕</div>
+      <div class="arch-layer">
+        <div class="layer-label">Observability</div>
+        <div class="layer-boxes">
+          <div class="box slate">Grafana Dashboards</div>
+          <div class="box slate">Prometheus Metrics</div>
+          <div class="box slate">Docker + Docker Compose</div>
+          <div class="box slate">Render (Production)</div>
+          <div class="box slate">GitHub Actions CI/CD</div>
+          <div class="box slate">Grafana Cloud</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Core Modules -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-num">02</span>
+      <h2>Core Feature Modules</h2>
+    </div>
+    <div class="cards">
+      <div class="card">
+        <div class="card-icon">🧩</div>
+        <h3>Task Management</h3>
+        <p>Researchers create coding or reasoning tasks with prompts, expected behaviors, and evaluation criteria. Tasks are versioned and tagged.</p>
+        <span class="tag">tasks_api.py</span>
+      </div>
+      <div class="card">
+        <div class="card-icon">👥</div>
+        <h3>Annotator Workspace</h3>
+        <p>Annotators are assigned tasks from a queue. They submit reward signals, qualitative feedback, and binary preference labels for agent outputs.</p>
+        <span class="tag">annotations_api.py</span>
+      </div>
+      <div class="card">
+        <div class="card-icon">🏆</div>
+        <h3>Reward Signal Collection</h3>
+        <p>Collects scalar rewards, pairwise rankings, and free-text rationales per task. Aggregates inter-annotator agreement scores.</p>
+        <span class="tag">feedback_api.py</span>
+      </div>
+      <div class="card">
+        <div class="card-icon">📊</div>
+        <h3>Quality Tracking</h3>
+        <p>Monitors annotator consistency, task completion rates, feedback distributions, and statistical outliers in reward signals.</p>
+        <span class="tag">quality_worker.py</span>
+      </div>
+      <div class="card">
+        <div class="card-icon">📈</div>
+        <h3>Metrics Dashboard</h3>
+        <p>Real-time Grafana dashboard showing task throughput, reward distributions, annotator performance, and dataset health.</p>
+        <span class="tag">metrics_api.py</span>
+      </div>
+      <div class="card">
+        <div class="card-icon">📦</div>
+        <h3>Dataset Export</h3>
+        <p>Generates clean JSONL/Parquet files formatted for RL fine-tuning (RLHF, DPO). Filters by quality thresholds before export.</p>
+        <span class="tag">export_worker.py</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Database Schema -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-num">03</span>
+      <h2>PostgreSQL Database Schema</h2>
+    </div>
+    <div class="schema-grid">
+      <div class="schema-table">
+        <div class="schema-table-header">users</div>
+        <div class="schema-field"><span class="field-name field-pk">id</span><span class="field-type">uuid PK</span></div>
+        <div class="schema-field"><span class="field-name">email</span><span class="field-type">varchar</span></div>
+        <div class="schema-field"><span class="field-name">role</span><span class="field-type">enum</span></div>
+        <div class="schema-field"><span class="field-name">created_at</span><span class="field-type">timestamp</span></div>
+      </div>
+      <div class="schema-table">
+        <div class="schema-table-header">tasks</div>
+        <div class="schema-field"><span class="field-name field-pk">id</span><span class="field-type">uuid PK</span></div>
+        <div class="schema-field"><span class="field-name field-fk">creator_id</span><span class="field-type">uuid FK</span></div>
+        <div class="schema-field"><span class="field-name">type</span><span class="field-type">enum</span></div>
+        <div class="schema-field"><span class="field-name">prompt</span><span class="field-type">text</span></div>
+        <div class="schema-field"><span class="field-name">status</span><span class="field-type">enum</span></div>
+        <div class="schema-field"><span class="field-name">metadata</span><span class="field-type">jsonb</span></div>
+      </div>
+      <div class="schema-table">
+        <div class="schema-table-header">task_assignments</div>
+        <div class="schema-field"><span class="field-name field-pk">id</span><span class="field-type">uuid PK</span></div>
+        <div class="schema-field"><span class="field-name field-fk">task_id</span><span class="field-type">uuid FK</span></div>
+        <div class="schema-field"><span class="field-name field-fk">annotator_id</span><span class="field-type">uuid FK</span></div>
+        <div class="schema-field"><span class="field-name">assigned_at</span><span class="field-type">timestamp</span></div>
+        <div class="schema-field"><span class="field-name">completed_at</span><span class="field-type">timestamp</span></div>
+      </div>
+      <div class="schema-table">
+        <div class="schema-table-header">feedback</div>
+        <div class="schema-field"><span class="field-name field-pk">id</span><span class="field-type">uuid PK</span></div>
+        <div class="schema-field"><span class="field-name field-fk">assignment_id</span><span class="field-type">uuid FK</span></div>
+        <div class="schema-field"><span class="field-name">reward_scalar</span><span class="field-type">float</span></div>
+        <div class="schema-field"><span class="field-name">rationale</span><span class="field-type">text</span></div>
+        <div class="schema-field"><span class="field-name">quality_score</span><span class="field-type">float</span></div>
+      </div>
+      <div class="schema-table">
+        <div class="schema-table-header">agent_outputs</div>
+        <div class="schema-field"><span class="field-name field-pk">id</span><span class="field-type">uuid PK</span></div>
+        <div class="schema-field"><span class="field-name field-fk">task_id</span><span class="field-type">uuid FK</span></div>
+        <div class="schema-field"><span class="field-name">model_id</span><span class="field-type">varchar</span></div>
+        <div class="schema-field"><span class="field-name">output</span><span class="field-type">text</span></div>
+        <div class="schema-field"><span class="field-name">generated_at</span><span class="field-type">timestamp</span></div>
+      </div>
+      <div class="schema-table">
+        <div class="schema-table-header">export_jobs</div>
+        <div class="schema-field"><span class="field-name field-pk">id</span><span class="field-type">uuid PK</span></div>
+        <div class="schema-field"><span class="field-name field-fk">created_by</span><span class="field-type">uuid FK</span></div>
+        <div class="schema-field"><span class="field-name">format</span><span class="field-type">enum</span></div>
+        <div class="schema-field"><span class="field-name">filters</span><span class="field-type">jsonb</span></div>
+        <div class="schema-field"><span class="field-name">file_url</span><span class="field-type">varchar</span></div>
+        <div class="schema-field"><span class="field-name">status</span><span class="field-type">enum</span></div>
+      </div>
+    </div>
+    <div class="note">Use role enum: researcher | annotator | admin. Task type enum: coding | reasoning | qa. Export format: jsonl | parquet | csv.</div>
+  </div>
+
+  <!-- 4. API Routes -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-num">04</span>
+      <h2>FastAPI Route Map</h2>
+    </div>
+    <div class="routes">
+      <div class="route"><span class="method post">POST</span><span class="route-path">/api/v1/auth/login</span><span class="route-desc">JWT auth — rate limited 10/min</span></div>
+      <div class="route"><span class="method post">POST</span><span class="route-path">/api/v1/auth/register</span><span class="route-desc">Register user — rate limited 5/min</span></div>
+      <div class="route"><span class="method get">GET</span><span class="route-path">/api/v1/tasks</span><span class="route-desc">List tasks with filters</span></div>
+      <div class="route"><span class="method post">POST</span><span class="route-path">/api/v1/tasks</span><span class="route-desc">Create new task</span></div>
+      <div class="route"><span class="method get">GET</span><span class="route-path">/api/v1/tasks/{id}</span><span class="route-desc">Get task detail</span></div>
+      <div class="route"><span class="method post">POST</span><span class="route-path">/api/v1/tasks/{id}/generate</span><span class="route-desc">Generate LLM response via Groq</span></div>
+      <div class="route"><span class="method put">PUT</span><span class="route-path">/api/v1/tasks/{id}</span><span class="route-desc">Update task</span></div>
+      <div class="route"><span class="method post">POST</span><span class="route-path">/api/v1/tasks/{id}/assign</span><span class="route-desc">Assign to annotator</span></div>
+      <div class="route"><span class="method get">GET</span><span class="route-path">/api/v1/annotator/queue</span><span class="route-desc">Annotator's task queue</span></div>
+      <div class="route"><span class="method post">POST</span><span class="route-path">/api/v1/feedback</span><span class="route-desc">Submit feedback + reward</span></div>
+      <div class="route"><span class="method get">GET</span><span class="route-path">/api/v1/feedback/{task_id}</span><span class="route-desc">Feedback for a task</span></div>
+      <div class="route"><span class="method get">GET</span><span class="route-path">/api/v1/metrics/dashboard</span><span class="route-desc">Aggregated metrics</span></div>
+      <div class="route"><span class="method get">GET</span><span class="route-path">/api/v1/metrics/quality</span><span class="route-desc">Quality scores</span></div>
+      <div class="route"><span class="method post">POST</span><span class="route-path">/api/v1/exports</span><span class="route-desc">Stream JSONL export directly to browser</span></div>
+      <div class="route"><span class="method get">GET</span><span class="route-path">/health</span><span class="route-desc">Health check</span></div>
+    </div>
+  </div>
+
+  <!-- 5. Build Phases -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-num">05</span>
+      <h2>Recommended Build Phases</h2>
+    </div>
+    <div class="arch-diagram">
+      <div class="phases">
+        <div class="phase">
+          <div class="phase-label"><strong>Phase 1</strong>✅ Done</div>
+          <div class="phase-items">
+            <span class="box cyan" style="font-size:12px">Docker Compose setup</span>
+            <span class="box cyan" style="font-size:12px">Postgres + Redis</span>
+            <span class="box cyan" style="font-size:12px">FastAPI skeleton</span>
+            <span class="box cyan" style="font-size:12px">Auth/JWT</span>
+            <span class="box cyan" style="font-size:12px">DB migrations (Alembic)</span>
+          </div>
+        </div>
+        <div class="phase">
+          <div class="phase-label"><strong>Phase 2</strong>✅ Done</div>
+          <div class="phase-items">
+            <span class="box purple" style="font-size:12px">Task CRUD APIs</span>
+            <span class="box purple" style="font-size:12px">Feedback API</span>
+            <span class="box purple" style="font-size:12px">Celery workers</span>
+            <span class="box purple" style="font-size:12px">Assignment queue</span>
+          </div>
+        </div>
+        <div class="phase">
+          <div class="phase-label"><strong>Phase 3</strong>✅ Done</div>
+          <div class="phase-items">
+            <span class="box green" style="font-size:12px">React + TypeScript frontend</span>
+            <span class="box green" style="font-size:12px">Task Creator UI</span>
+            <span class="box green" style="font-size:12px">Annotator workspace</span>
+            <span class="box green" style="font-size:12px">API integration</span>
+          </div>
+        </div>
+        <div class="phase">
+          <div class="phase-label"><strong>Phase 4</strong>✅ Done</div>
+          <div class="phase-items">
+            <span class="box amber" style="font-size:12px">Quality scoring</span>
+            <span class="box amber" style="font-size:12px">Export pipeline</span>
+            <span class="box amber" style="font-size:12px">Grafana setup</span>
+            <span class="box amber" style="font-size:12px">Prometheus metrics</span>
+          </div>
+        </div>
+        <div class="phase">
+          <div class="phase-label"><strong>Phase 5</strong>✅ Deployed</div>
+          <div class="phase-items">
+            <span class="box green" style="font-size:12px">Render deployment</span>
+            <span class="box green" style="font-size:12px">GitHub Actions CI/CD</span>
+            <span class="box green" style="font-size:12px">Upstash Redis (TLS)</span>
+            <span class="box green" style="font-size:12px">Rate limiting</span>
+            <span class="box green" style="font-size:12px">Grafana Cloud</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. Tech Stack Detail -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-num">06</span>
+      <h2>Tech Stack Decisions</h2>
+    </div>
+    <div class="cards">
+      <div class="card">
+        <div class="card-icon">⚡</div>
+        <h3>FastAPI + Pydantic v2</h3>
+        <p>Auto-generated OpenAPI docs, async endpoints, strong request/response validation. Use SQLAlchemy 2.0 async ORM + Alembic for migrations.</p>
+        <span class="tag">backend</span>
+      </div>
+      <div class="card">
+        <div class="card-icon">⚛️</div>
+        <h3>React + TypeScript + Vite</h3>
+        <p>Use React Query (TanStack) for server state, Zustand for UI state, React Hook Form for task creation forms. Tailwind CSS for styling.</p>
+        <span class="tag">frontend</span>
+      </div>
+      <div class="card">
+        <div class="card-icon">🐘</div>
+        <h3>PostgreSQL + Redis</h3>
+        <p>Postgres for all relational data with JSONB for task metadata. Redis for Celery task queues and caching hot metrics queries.</p>
+        <span class="tag">data</span>
+      </div>
+      <div class="card">
+        <div class="card-icon">🌿</div>
+        <h3>Celery Workers</h3>
+        <p>Async workers for: quality score computation, dataset export generation, annotator assignment, and notification dispatch.</p>
+        <span class="tag">workers</span>
+      </div>
+      <div class="card">
+        <div class="card-icon">📉</div>
+        <h3>Grafana + Prometheus</h3>
+        <p>Instrument FastAPI with prometheus-fastapi-instrumentator. Build dashboards for reward distributions, task throughput, and annotator stats.</p>
+        <span class="tag">observability</span>
+      </div>
+      <div class="card">
+        <div class="card-icon">🚀</div>
+        <h3>Docker + Render</h3>
+        <p>Docker Compose for local dev. Deployed to Render (API + Worker + Frontend). GitHub Actions auto-deploys on push to main. Upstash Redis with TLS for production queue.</p>
+        <span class="tag">infra</span>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- 7. Security & Deployment -->
+  <div class="section">
+    <div class="section-header">
+      <span class="section-num">07</span>
+      <h2>Security & Production Deployment</h2>
+    </div>
+    <div class="cards">
+      <div class="card">
+        <div class="card-icon">🔐</div>
+        <h3>Auth & Access Control</h3>
+        <p>JWT tokens with role-based access. Researchers and annotators have separate endpoints enforced at the API level. bcrypt + SHA-256 password hashing.</p>
+        <span class="tag">implemented</span>
+      </div>
+      <div class="card">
+        <div class="card-icon">🚦</div>
+        <h3>Rate Limiting</h3>
+        <p>Login limited to 10 requests/min per IP. Registration limited to 5/min. Prevents brute force attacks. Implemented via slowapi.</p>
+        <span class="tag">implemented</span>
+      </div>
+      <div class="card">
+        <div class="card-icon">🌐</div>
+        <h3>CORS</h3>
+        <p>Locked to frontend origin only. No wildcard origins. Configured per-environment via ALLOWED_ORIGINS env var.</p>
+        <span class="tag">implemented</span>
+      </div>
+      <div class="card">
+        <div class="card-icon">🔒</div>
+        <h3>Secrets Management</h3>
+        <p>All secrets stored as environment variables on Render. .env and prometheus.yml excluded from git. Groq and Grafana tokens never committed.</p>
+        <span class="tag">implemented</span>
+      </div>
+      <div class="card">
+        <div class="card-icon">🚀</div>
+        <h3>CI/CD Pipeline</h3>
+        <p>GitHub Actions triggers on push to main. Deploys API, Worker, and Frontend to Render in parallel via deploy hooks. Worker deploys after API succeeds.</p>
+        <span class="tag">implemented</span>
+      </div>
+      <div class="card">
+        <div class="card-icon">📡</div>
+        <h3>Observability</h3>
+        <p>Prometheus scrapes /metrics every 60s. Remote write to Grafana Cloud. Dashboards for request rate, p95 latency, error rate, and endpoint breakdown.</p>
+        <span class="tag">implemented</span>
+      </div>
+    </div>
+  </div>
+
+  <div style="text-align:center; padding: 40px 0 20px; font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--muted); letter-spacing: 0.1em;">
+    RLFLOW — ARCHITECTURE DOCUMENT v2.0 — FULLY DEPLOYED
+  </div>
+
+</div>
+</body>
+</html>
