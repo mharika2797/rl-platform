@@ -5,7 +5,7 @@
 RLFlow is a full-stack platform for collecting human feedback on LLM outputs — the same type of infrastructure used to train models like ChatGPT and Claude. Researchers create tasks, an LLM generates responses, human annotators rate the outputs, and the system exports clean RLHF datasets in JSONL format ready for fine-tuning.
 
 🔗 **Live Demo:** https://rl-platform-frontend.onrender.com  
-📡 **API Docs:** https://rl-platform-api.onrender.com/docs
+📡 **API Docs:** https://rl-platform-api.onrender.com/docs  
 📐 **Architecture:** https://mharika2797.github.io/rl-platform/
 
 ---
